@@ -214,52 +214,9 @@ def get_menu_without_allergens(goal, meal_type, allergies):
     cur = conn.cursor(cursor_factory=RealDictCursor)
 
     try:
-        if allergies:
-            cur.execute("""
-                SELECT mt.id, mt.goal, mt.meal_type, mt.name,
-                       (SELECT calories FROM calculate_dish_nutrition(mt.id)) as calories,
-                       (SELECT protein FROM calculate_dish_nutrition(mt.id)) as protein,
-                       (SELECT fat FROM calculate_dish_nutrition(mt.id)) as fat,
-                       (SELECT carbs FROM calculate_dish_nutrition(mt.id)) as carbs,
-                       COALESCE(
-                            (SELECT STRING_AGG(p.name || ' - ' || di.quantity_grams || ' г', '\n')
-                            FROM dish_ingredients di
-                            JOIN products p ON di.product_id = p.id
-                            WHERE di.menu_id = mt.id),
-                           'Ингредиенты не указаны'
-                       ) as ingredients,
-                       mt.instructions,
-                       mt.likes,
-                       mt.dislikes,
-                       mt.avg_rating
-                FROM menu_templates mt
-                WHERE mt.goal = %s AND mt.meal_type = %s AND mt.is_active = TRUE
-                AND NOT EXISTS (
-                    SELECT 1 FROM menu_allergens ma
-                    WHERE ma.menu_id = mt.id AND ma.allergen_name = ANY(%s)
-                )
-            """, (goal, meal_type, allergies))
-        else:
-            cur.execute("""
-                SELECT mt.id, mt.goal, mt.meal_type, mt.name,
-                       (SELECT calories FROM calculate_dish_nutrition(mt.id)) as calories,
-                       (SELECT protein FROM calculate_dish_nutrition(mt.id)) as protein,
-                       (SELECT fat FROM calculate_dish_nutrition(mt.id)) as fat,
-                       (SELECT carbs FROM calculate_dish_nutrition(mt.id)) as carbs,
-                       COALESCE(
-                           (SELECT STRING_AGG(p.name || ' - ' || di.quantity_grams || ' г', '\n')
-                            FROM dish_ingredients di
-                            JOIN products p ON di.product_id = p.id
-                            WHERE di.menu_id = mt.id),
-                           'Ингредиенты не указаны'
-                       ) as ingredients,
-                       mt.instructions,
-                       mt.likes,
-                       mt.dislikes,
-                       mt.avg_rating
-                FROM menu_templates mt
-                WHERE mt.goal = %s AND mt.meal_type = %s AND mt.is_active = TRUE
-            """, (goal, meal_type))
+        cur.execute("""
+            SELECT * FROM get_menu_without_allergens(%s, %s, %s)
+        """, (goal, meal_type, allergies))
 
         return cur.fetchall()
     except Exception as e:
